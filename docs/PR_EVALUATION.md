@@ -1,6 +1,6 @@
 # Lightweight PR evaluation
 
-Status: specification to implement during P1, not an existing CI system.
+Status: target verification policy. The prototype implements a compact GitHub Actions check: documentation-only changes skip application workloads; all other changes run typecheck, lint, the compact rules/differential/service suite, and one production build. Browser smoke is available via npm run test:browser. Fine-grained transitive selection, hosted multi-connection checks, and protected release promotion remain follow-up work. See docs/IMPLEMENTATION_STATUS.md for evidence and gaps; the detailed release design below is not a claim that all gates are implemented.
 
 ## Principles and budget
 

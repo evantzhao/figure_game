@@ -2,7 +2,7 @@
 
 ## Start here
 
-Read docs/TECHNICAL_PLAN.md, docs/PR_EVALUATION.md, and the nearest scoped AGENTS.md before editing. Inspect the actual repository and git status; preserve unrelated changes. The current baseline is a static landing page with planning documents; the Xiangqi application and its test tooling are not implemented. Planned commands, architecture, and CI are proposals until implemented; never report them as available or passing.
+Read docs/TECHNICAL_PLAN.md, docs/PR_EVALUATION.md, docs/decisions/001-prototype-boundaries.md, and the nearest scoped AGENTS.md before editing. Inspect the actual repository and git status; preserve unrelated changes. The baseline is a Next.js casual Xiangqi prototype with an owned rules core, worker CPU, server-only Postgres, username/password accounts, and polling multiplayer. See README.md for runnable commands and release limitations. The original production architecture remains a target, not an implemented service configuration.
 
 Implement one coherent milestone at a time. Briefly describe the intended change and its acceptance criteria before application code. Record substantive architecture departures in a short decision record under docs/decisions. Keep the technical plan current when a milestone ships. Do not add services or broad abstractions without a concrete need.
 
@@ -44,3 +44,13 @@ Use docs/PR_EVALUATION.md to choose the smallest meaningful checks for changed b
 Rules, auth, transaction concurrency, clocks, and ratings require behavior tests. Reversible copy/style changes normally do not need new automated tests. Use deterministic fixtures and fake clocks for timing logic; use a real isolated database for transactions and RLS.
 
 Every PR explains the problem, changed behavior, evidence, untested limitations, and rollback. Report exact checks actually run. Never claim a preview, production deployment, migration, or service connection succeeded without verifying it. Do not weaken branch gates to make a change pass.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

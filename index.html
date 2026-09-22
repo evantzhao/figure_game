@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#11120f" />
+    <meta
+      name="description"
+      content="Figure Chess is a focused home for learning, playing, and seeing the board more clearly."
+    />
+    <title>Figure Chess</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="Figure Chess home">
+        <span class="brand-mark" aria-hidden="true">♞</span>
+        <span>FIGURE CHESS</span>
+      </a>
+      <span class="status"><i aria-hidden="true"></i> Foundation live</span>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">A sharper way to study the board</p>
+          <h1>See the position.<br /><em>Find the idea.</em></h1>
+          <p class="lede">
+            Figure Chess is taking shape—a focused place to learn patterns,
+            practice decisions, and turn every game into useful feedback.
+          </p>
+          <div class="build-note">
+            <span>01</span>
+            <p><strong>The board is set.</strong> Product development starts here.</p>
+          </div>
+        </div>
+
+        <div class="board-wrap" aria-label="Decorative chessboard">
+          <div class="board" aria-hidden="true">
+            <span class="piece black rook">♜</span>
+            <span class="piece black knight">♞</span>
+            <span class="piece black queen">♛</span>
+            <span class="piece white pawn">♙</span>
+            <span class="piece white bishop">♗</span>
+            <span class="piece white king">♔</span>
+          </div>
+          <p class="position-label">POSITION 001 · WHITE TO MOVE</p>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span>© <span id="year"></span> Figure Chess</span>
+      <span>Built thoughtfully on Vercel</span>
+    </footer>
+
+    <script src="/script.js"></script>
+  </body>
+</html>

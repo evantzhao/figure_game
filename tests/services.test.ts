@@ -75,6 +75,15 @@ describe(`database-backed prototype services (${process.env.TEST_DATABASE_URL ? 
   await expect(command(db, red, game.id, { ...input, move: parseMove('c3c4') })).rejects.toMatchObject({ status: 409 });
   expect(await db.query('SELECT * FROM moves')).toHaveLength(1);
  });
+ it('persists game state, receipts, and practice moves as JSON structures rather than encoded strings', async () => {
+  const game = await table();
+  const next = await command(db, red, game.id, action(game.version));
+  await savePractice(db, red, randomUUID(), next.state.moves, 'JSON regression');
+  expect((await db.query('SELECT jsonb_typeof(state) AS kind FROM games'))[0].kind).toBe('object');
+  expect((await db.query('SELECT jsonb_typeof(response) AS kind FROM commands'))[0].kind).toBe('object');
+  expect((await db.query('SELECT jsonb_typeof(moves) AS kind FROM practice'))[0].kind).toBe('array');
+  expect((await history(db, red, 0)).find(row => row.kind === 'practice')?.moves).toEqual([parseMove('a3a4')]);
+ });
  it('accepts only one competing move at the same version', async () => {
   const game = await table();
   const results = await Promise.allSettled([command(db, red, game.id, action(game.version)), command(db, red, game.id, action(game.version, 'move', 'c3c4'))]);

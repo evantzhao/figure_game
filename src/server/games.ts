@@ -46,7 +46,8 @@ async function existing(tx: Executor, user: string): Promise<string | null> {
 }
 async function create(tx: Executor, red: string, black: string | null, now: number): Promise<GameRow> {
   const id = randomUUID();
-  await tx.query('INSERT INTO games(id,red_id,black_id,status,state,turn_started,ruleset) VALUES($1,$2,$3,$4,$5,$6,$7)', [id, red, black, black ? 'active' : 'waiting', JSON.stringify(newGame()), black ? now : null, RULESET]);
+  // Bind encoded JSON as text before casting: postgres.js otherwise JSON-encodes the string again.
+  await tx.query('INSERT INTO games(id,red_id,black_id,status,state,turn_started,ruleset) VALUES($1,$2,$3,$4,$5::text::jsonb,$6,$7)', [id, red, black, black ? 'active' : 'waiting', JSON.stringify(newGame()), black ? now : null, RULESET]);
   await tx.query('INSERT INTO active_players(user_id,game_id) VALUES($1,$2)', [red, id]);
   if (black) await tx.query('INSERT INTO active_players(user_id,game_id) VALUES($1,$2)', [black, id]);
   return loadGame(tx, id);
@@ -118,12 +119,12 @@ export async function command(db: Database, user: string, id: string, input: Com
         else game.black_ms = Math.max(0, Math.ceil(game.black_ms - elapsed)) + 5000;
         game.state = next; game.version++; game.turn_started = now; game.draw_by = null;
         await tx.query('INSERT INTO moves(game_id,ply,actor_id,move,fen) VALUES($1,$2,$3,$4,$5)', [id, next.moves.length, user, moveUci(input.move), toFen(next.position)]);
-        await tx.query('UPDATE games SET state=$2,version=$3,red_ms=$4,black_ms=$5,turn_started=$6,draw_by=NULL,updated_at=now() WHERE id=$1', [id, JSON.stringify(next), game.version, game.red_ms, game.black_ms, now]);
+        await tx.query('UPDATE games SET state=$2::text::jsonb,version=$3,red_ms=$4,black_ms=$5,turn_started=$6,draw_by=NULL,updated_at=now() WHERE id=$1', [id, JSON.stringify(next), game.version, game.red_ms, game.black_ms, now]);
         if (next.outcome) await finish(tx, game, next.outcome.winner, next.outcome.reason, next.outcome.review);
       }
     }
     const response: OnlineGame = { ...game, serverNow: now };
-    await tx.query('INSERT INTO commands(user_id,command_id,payload_hash,response) VALUES($1,$2,$3,$4)', [user, input.commandId, hash, JSON.stringify(response)]);
+    await tx.query('INSERT INTO commands(user_id,command_id,payload_hash,response) VALUES($1,$2,$3,$4::text::jsonb)', [user, input.commandId, hash, JSON.stringify(response)]);
     return response;
   });
 }
@@ -150,7 +151,7 @@ export async function queue(db: Database, user: string, cancel = false, rated = 
 export async function savePractice(db: Database, user: string, id: string, moves: Move[], label: string) {
   let state: GameState;
   try { state = replay(moves); } catch { throw new ServiceError(422, 'This replay contains an illegal move or continues after the game ended.'); }
-  const rows = await db.query('INSERT INTO practice(id,user_id,label,moves,reason) VALUES($1,$2,$3,$4,$5) ON CONFLICT(id) DO UPDATE SET moves=excluded.moves,reason=excluded.reason WHERE practice.user_id=excluded.user_id RETURNING id', [id,user,label,JSON.stringify(moves),state.outcome?.reason ?? null]);
+  const rows = await db.query('INSERT INTO practice(id,user_id,label,moves,reason) VALUES($1,$2,$3,$4::text::jsonb,$5) ON CONFLICT(id) DO UPDATE SET moves=excluded.moves,reason=excluded.reason WHERE practice.user_id=excluded.user_id RETURNING id', [id,user,label,JSON.stringify(moves),state.outcome?.reason ?? null]);
   if (!rows.length) throw new ServiceError(409, 'Save ID is already in use.');
   return { id };
 }

@@ -2,6 +2,18 @@
 
 Date: 2026-09-22. This is a casual prototype for review, not a production or rated release.
 
+## Follow-up validation (2026-09-23)
+
+[PR #3](https://github.com/evantzhao/figure_game/pull/3) adds disposable multi-connection Postgres and Chromium journeys to normal application CI. Its checks and PR description contain the current results; the original-run evidence below remains historical.
+
+The real Postgres run caught a persistence bug: pre-encoded JSON strings were serialized again by postgres.js into JSON string values. State, command receipts, and practice moves now bind through text before conversion to jsonb. A regression checks the persisted JSON types and replay data. No hosted database was provisioned, so no existing hosted data repair was performed.
+
+The browser run caught same-site signup rejection caused by comparing Origin to Next's internal bind hostname. The server now compares the incoming Host authority and request protocol with Origin. Unit cases and browser requests continue to reject cross-site mutations. This does not trust forwarded host headers.
+
+Added checks include distinct Postgres backend connections, simultaneous pairing, cancellation versus matching, and fixture-only exactly-once rating finalization. Rated play stays unavailable to users. Both browser journeys run against real Postgres in CI; desktop/mobile screenshots and failure traces are available in each run's browser-evidence artifact. The original embedded/local limits below do not describe the new CI configuration.
+
+Hosted launch remains blocked: the connected Vercel team has no Figure Chess project, the connector deployment action is unavailable, and the CLI has no credentials. The connected Supabase organization has no Figure Chess project. Organization/cost confirmation and working deployment authorization are required before provisioning. Existing unrelated projects were not modified. These are CI tests, not a live hosted preview or actual iOS Safari verification.
+
 ## Implemented
 
 - Next.js/TypeScript application with a responsive Xiangqi board, tap/keyboard/drag controls, Chinese/English pieces, board flip, move journal, replay, and learning pages.

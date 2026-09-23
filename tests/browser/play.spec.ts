@@ -1,6 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 
 async function signUp(page: Page, username: string) {
+ const crossSite = await page.request.post('/api/register', {
+  headers: { Origin: 'https://unrelated.example' },
+  data: { username, password: 'unique browser test password' },
+ });
+ expect(crossSite.status()).toBe(403);
  await page.goto('/account');
  await page.getByRole('button', { name: 'New here? Create an account' }).click();
  await page.getByLabel('Username').fill(username);
@@ -36,8 +41,8 @@ test('guest CPU replies legally, replay works, and mobile board fits', async ({ 
  expect(errors).toEqual([]);
 });
 
-test('two accounts join, exchange moves, reconnect, resign, and see saved history', async ({ browser }) => {
- const a = await browser.newContext(), b = await browser.newContext();
+test('two accounts join, exchange moves, reconnect, resign, and see saved history', async ({ browser, baseURL }) => {
+ const a = await browser.newContext({ baseURL }), b = await browser.newContext({ baseURL });
  const red = await a.newPage(), black = await b.newPage();
  const stamp = Date.now().toString(36);
  try {

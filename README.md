@@ -38,7 +38,7 @@ npx playwright install chromium
 npm run test:browser   # Focused CPU/mobile and two-account online journeys
 ```
 
-Service tests use disposable PGlite, not hosted multi-connection Postgres. They do not prove hosted lock contention, Supabase policies, or production service integration. Browser tests use a separate temporary local database and no hosted credentials.
+Local service tests default to disposable PGlite. CI runs them against a disposable Postgres 17.6 service and uses that same isolated server for both browser journeys. `TEST_DATABASE_URL` (service tests) and `TEST_BROWSER_DATABASE_URL` (browser server) accept only localhost/figure_chess_test; hosted targets are rejected. Run the service tests first to initialize the schema before a Postgres browser run. Browser tests otherwise use a fresh temporary PGlite database. These checks do not prove Supabase policies, provider integration, or iOS Safari behavior. No production credentials are used.
 
 ## Vercel and hosted database
 

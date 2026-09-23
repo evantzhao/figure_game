@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { pgliteDatabase, type Database } from '@/server/db';
+import { connectPostgres, pgliteDatabase, type Database } from '@/server/db';
 import { authenticate, login, logout, rateLimit, register } from '@/server/auth';
 import { command, createChallenge, getGame, history, joinGame, queue, savePractice } from '@/server/games';
 import { parseMove } from '@/domain/xiangqi/rules';
@@ -13,11 +13,21 @@ const red = randomUUID(), black = randomUUID(), outsider = randomUUID();
 const action = (version: number, name: Command['action'] = 'move', move = 'a3a4'): Command => ({ commandId: randomUUID(), version, action: name, ...(name === 'move' ? { move: parseMove(move) } : {}) });
 async function table() { const waiting = await createChallenge(db, red); return joinGame(db, black, waiting.id); }
 beforeAll(async () => {
+ const testUrl = process.env.TEST_DATABASE_URL;
+ if (testUrl) {
+  const url = new URL(testUrl);
+  if (!['localhost', '127.0.0.1'].includes(url.hostname) || url.pathname !== '/figure_chess_test') {
+   throw new Error('Destructive service fixtures require localhost/figure_chess_test; hosted databases are forbidden.');
+  }
+  db = await connectPostgres(testUrl);
+  await db.query(await readFile('db/migrations/001_initial.sql', 'utf8'));
+  return;
+ }
  const pg = new PGlite();
  await pg.exec(await readFile('db/migrations/001_initial.sql', 'utf8'));
  db = pgliteDatabase(pg);
 });
-afterAll(async () => { await db.close(); });
+afterAll(async () => { await db?.close(); });
 beforeEach(async () => {
  await db.query('TRUNCATE accounts, rate_limits CASCADE');
  for (const [id, username] of [[red, 'red_user'], [black, 'black_user'], [outsider, 'other_user']]) {
@@ -25,7 +35,14 @@ beforeEach(async () => {
  }
 });
 
-describe('database-backed prototype services (embedded Postgres; not multi-connection proof)', () => {
+describe(`database-backed prototype services (${process.env.TEST_DATABASE_URL ? 'multi-connection Postgres' : 'embedded Postgres'})`, () => {
+ it.skipIf(!process.env.TEST_DATABASE_URL)('uses distinct backend connections for overlapping transactions', async () => {
+  const pids = await Promise.all([0, 1].map(() => db.transaction(async tx => {
+   const [row] = await tx.query<{ pid: number }>('SELECT pg_backend_pid() AS pid, pg_sleep(0.1)');
+   return row.pid;
+  })));
+  expect(new Set(pids).size).toBe(2);
+ });
  it('registers, authenticates, rejects bad passwords, and revokes logout sessions', async () => {
   const account = await register(db, 'new_user', 'long test password');
   expect(await authenticate(db, account.token)).toEqual(account.user);
@@ -118,5 +135,43 @@ describe('database-backed prototype services (embedded Postgres; not multi-conne
   expect(await history(db, black, 0)).toHaveLength(0);
   await expect(savePractice(db, black, id, [], 'Overwrite')).rejects.toMatchObject({ status: 409 });
   await expect(savePractice(db, red, randomUUID(), [parseMove('a3a5')], 'Illegal')).rejects.toMatchObject({ status: 422 });
+ });
+ it('concurrent queue requests never seat a user twice', async () => {
+  const fourth = randomUUID();
+  await db.query('INSERT INTO accounts(id,username,password_hash) VALUES($1,$2,$3)', [fourth, 'fourth_user', 'fixture-only']);
+  await Promise.all([red, black, outsider, fourth, red, black].map(id => queue(db, id)));
+  const seats = await db.query<{ user_id: string; game_id: string }>('SELECT user_id,game_id FROM active_players');
+  expect(seats).toHaveLength(4);
+  expect(new Set(seats.map(row => row.user_id)).size).toBe(4);
+  expect(new Set(seats.map(row => row.game_id)).size).toBe(2);
+  expect(await db.query('SELECT * FROM queue_tickets')).toHaveLength(0);
+ });
+ it('cancel racing with a match returns either cancellation or the committed game', async () => {
+  await queue(db, red);
+  const [cancelled, matched] = await Promise.all([queue(db, red, true), queue(db, black)]);
+  const seats = await db.query('SELECT * FROM active_players');
+  if (matched.gameId) {
+   expect(cancelled.gameId).toBe(matched.gameId);
+   expect(seats).toHaveLength(2);
+  } else {
+   expect(cancelled).toMatchObject({ queued: false, gameId: null });
+   expect(seats).toHaveLength(0);
+  }
+ });
+ it('competing terminal requests apply rating events exactly once in an isolated rated fixture', async () => {
+  const game = await table();
+  // Fixture-only opt-in. No application endpoint can create rated games.
+  await db.query('UPDATE games SET rated=true WHERE id=$1', [game.id]);
+  const results = await Promise.all([
+   command(db, red, game.id, action(game.version, 'resign')),
+   command(db, black, game.id, action(game.version, 'resign')),
+  ]);
+  expect(results[0].winner).toBe(results[1].winner);
+  expect(results.every(result => result.status === 'finished')).toBe(true);
+  expect(await db.query('SELECT * FROM rating_events')).toHaveLength(2);
+  const accounts = await db.query<{ rating: number; rated_games: number }>('SELECT rating,rated_games FROM accounts WHERE id=$1 OR id=$2', [red, black]);
+  expect(accounts.map(row => row.rating).sort()).toEqual([1484, 1516]);
+  expect(accounts.every(row => row.rated_games === 1)).toBe(true);
+  expect(await db.query('SELECT * FROM active_players')).toHaveLength(0);
  });
 });

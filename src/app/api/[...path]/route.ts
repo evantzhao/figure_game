@@ -5,6 +5,7 @@ import { RATED_AVAILABLE } from '@/domain/xiangqi/rules';
 import { authenticate, register, login, logout, rateLimit, SESSION_COOKIE, SESSION_SECONDS, digest } from '@/server/auth';
 import { getDb, backendConfigured, ServiceError } from '@/server/db';
 import * as games from '@/server/games';
+import { isSameOrigin } from '@/server/origin';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 const headers = { 'Cache-Control': 'no-store, private' };
@@ -17,7 +18,7 @@ async function body(request: NextRequest): Promise<unknown> {
 async function handle(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   try {
     const {path}=await context.params, route=path.join('/'), mutation=request.method==='POST';
-    if (mutation && request.headers.get('origin') !== request.nextUrl.origin) throw new ServiceError(403,'This request must come from the same site.');
+    if (mutation && !isSameOrigin(request.headers.get('origin'), request.headers.get('host'), request.nextUrl.protocol)) throw new ServiceError(403,'This request must come from the same site.');
     if (route==='status' && !mutation) return json({online:backendConfigured(),rated:RATED_AVAILABLE});
     if (route==='maintenance' && mutation) {
       const secret=process.env.CRON_SECRET;

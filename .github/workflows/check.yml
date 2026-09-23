@@ -61,6 +61,8 @@ jobs:
       - name: Verify CPU, mobile layout, and two-player flow
         if: steps.scope.outputs.code == 'true'
         run: npm run test:browser
+        env:
+          TEST_BROWSER_DATABASE_URL: postgres://figure_test:disposable-ci-password@127.0.0.1:5432/figure_chess_test
       - name: Retain browser evidence
         if: always() && steps.scope.outputs.code == 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

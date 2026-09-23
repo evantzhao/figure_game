@@ -1,6 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 
 async function signUp(page: Page, username: string) {
+ const crossSite = await page.request.post('/api/register', {
+  headers: { Origin: 'https://unrelated.example' },
+  data: { username, password: 'unique browser test password' },
+ });
+ expect(crossSite.status()).toBe(403);
  await page.goto('/account');
  await page.getByRole('button', { name: 'New here? Create an account' }).click();
  await page.getByLabel('Username').fill(username);

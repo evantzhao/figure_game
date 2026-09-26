@@ -7,3 +7,52 @@
 @media(max-width:950px){.site-header{padding:0 24px;gap:20px;height:82px}.site-header nav{gap:20px}.brand{font-size:22px}.brand small{font-size:7px;letter-spacing:1.4px}.header-actions{gap:10px}.play-page{padding:27px 24px 0}.play-layout{gap:22px;grid-template-columns:minmax(0,1fr) 290px}.setup{padding:21px 18px}.setup h2{font-size:26px}.heading-help{display:none}.piece-disc{font-size:clamp(18px,3vw,29px)}.setup-bottom{gap:8px}.time-choice small{font-size:9px}.side-choice button{padding:5px 10px}.account-layout{gap:40px}.rules-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:720px){.site-header{padding:0 17px;height:76px;flex-wrap:wrap;gap:0;align-content:center;justify-content:space-between;position:relative}.brand{font-size:21px;gap:8px}.brand-seal{width:34px;height:34px;font-size:24px;border-radius:9px}.brand small{font-size:6px;letter-spacing:1.4px;margin-top:7px}.site-header nav{order:3;position:absolute;top:76px;left:0;right:0;height:43px;justify-content:center;gap:35px;background:var(--surface);border-bottom:1px solid var(--line)}.site-header nav a{font-size:11px}.header-actions{gap:7px}.account-link{font-size:11px}.account-link svg{display:none}main{padding-top:43px}.play-page{padding:22px 14px 0}.page-heading{margin-bottom:13px}.page-heading h1{font-size:27px}.eyebrow{font-size:8px;letter-spacing:1.8px;margin-bottom:8px}.play-layout{display:flex;flex-direction:column;gap:16px}.game-surface{width:100%;max-width:570px;margin:0 auto}.player-bar{height:54px;padding:0 4px}.avatar{width:33px;height:33px;font-size:21px}.player-info strong{font-size:12px}.player-info span{font-size:9px}.board-frame{padding:7px 7px 0;border-radius:6px}.piece-disc{font-size:clamp(20px,6.2vw,33px)}.piece-disc:before{inset:3px}.piece-disc small{font-size:5px}.file-labels{font-size:8px;padding-bottom:4px}.board-toolbar{padding:6px 0}.live-status{font-size:10px}.side-panel{width:100%;padding:0;display:grid;grid-template-columns:1fr;gap:13px}.setup{padding:23px}.setup h2{font-size:30px}.setup .muted{margin-bottom:17px}.side-choice button{padding:7px 17px}.time-choice small{font-size:11px}.setup-bottom{margin-bottom:17px}.moves-card .move-list{height:125px}.learn-note{padding:8px 5px}.below-board{margin-top:10px;align-items:start;gap:12px;padding:18px 5px}.below-board p{font-size:10px}.prototype-label{display:none}.site-footer{padding:22px 18px;font-size:9px;flex-wrap:wrap;gap:10px}.site-footer>span:nth-child(2){display:none}.content-page{padding:30px 18px 45px}.content-page h1{font-size:34px}.account-layout{display:flex;flex-direction:column;gap:25px;min-height:0}.account-intro{width:100%}.account-intro .large-seal{display:none}.account-intro h1{font-size:34px}.account-intro p{margin-top:12px;font-size:13px;max-width:none}.account-form{width:100%;padding:23px}.rules-grid{gap:12px;margin-top:24px}.rule-card{padding:18px}.rule-card p{font-size:11px}.rule-important{grid-template-columns:1fr}.history-row{gap:10px;padding:17px 12px;flex-wrap:wrap}.history-row strong{font-size:12px}.history-row .pill{display:none}.history-row small{font-size:10px}.history-row .button{font-size:11px;padding:8px}.clock{font-size:22px}.stat-grid{gap:7px}.stat{padding:12px}.stat strong{font-size:22px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+
+/* Board interaction polish: keep the complete 9×10 board visible while preserving usable targets. */
+.game-surface{
+  width:min(100%,590px,max(320px,calc((100svh - 270px)*.9)));
+  justify-self:center;
+}
+.piece-disc.moving{
+  animation:piece-slide 190ms cubic-bezier(.2,.8,.2,1);
+  will-change:transform;
+}
+@keyframes piece-slide{
+  from{transform:translate(var(--move-x),var(--move-y));filter:brightness(1.08)}
+  to{transform:translate(0,0);filter:brightness(1)}
+}
+.live-status.reviewing{color:var(--accent);font-weight:600}
+.live-status.reviewing i{background:var(--accent)}
+.return-live{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  min-height:29px;
+  padding:3px 8px;
+  border:1px solid color-mix(in srgb,var(--accent) 45%,var(--line));
+  border-radius:5px;
+  color:var(--accent);
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+.return-live:hover{background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.history-shortcut{
+  margin:0;
+  padding:0 10px 9px;
+  color:var(--muted);
+  font-size:9px;
+  text-align:center;
+}
+@media(max-width:720px){
+  .game-surface{width:min(100%,570px,max(320px,calc((100svh - 248px)*.9)))}
+  .return-live span{display:none}
+  .return-live{padding:3px 6px}
+}
+@media(max-width:720px) and (max-height:760px){
+  .play-page{padding-top:8px}
+  .page-heading{display:none}
+  .player-bar{height:48px}
+  .game-surface{width:min(100%,max(300px,calc((100svh - 190px)*.9)))}
+}

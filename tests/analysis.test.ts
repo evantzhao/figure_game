@@ -9,6 +9,9 @@ describe('local post-game analysis', () => {
   expect(result.depth).toBeGreaterThan(0);
   expect(legalMoves(position)).toContainEqual(result.best);
   expect(result.loss).toBeGreaterThanOrEqual(0);
+  // A routine opening pawn move is not a lost horse: the apparent cannon
+  // capture of b0 is met by a rook recapture. Resolve the exchange first.
+  expect(result.loss).toBeLessThan(100);
   expect(JSON.stringify(position)).toBe(before);
  });
  it('identifies a free rook capture and scores the same best move with no loss', () => {

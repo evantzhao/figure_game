@@ -211,6 +211,7 @@ describe('account lifecycle, rematches, and scheduled settlement', () => {
   expect(await authenticate(db,a.token)).toBeNull();
   await expect(login(db,'delete_me','long delete password')).rejects.toMatchObject({status:401});
   await expect(createChallenge(db,a.user.id)).rejects.toMatchObject({status:401});
+  await expect(savePractice(db,a.user.id,randomUUID(),[],'Late request')).rejects.toMatchObject({status:401});
   expect(await db.query('SELECT * FROM practice WHERE user_id=$1',[a.user.id])).toHaveLength(0);
   expect(await db.query('SELECT * FROM commands WHERE user_id=$1',[a.user.id])).toHaveLength(0);
   const records=await history(db,black,0);

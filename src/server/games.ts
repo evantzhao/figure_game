@@ -44,8 +44,8 @@ async function existing(tx: Executor, user: string): Promise<string | null> {
   await settle(tx, game, await databaseNow(tx));
   return ['waiting','active'].includes(game.status) ? game.id : null;
 }
-async function requireAccount(tx: Executor, user: string) {
-  const [account] = await tx.query('SELECT id FROM accounts WHERE id=$1 AND deleted_at IS NULL', [user]);
+async function requireAccount(tx: Executor, user: string, lock = false) {
+  const [account] = await tx.query(`SELECT id FROM accounts WHERE id=$1 AND deleted_at IS NULL${lock ? ' FOR UPDATE' : ''}`, [user]);
   if (!account) throw new ServiceError(401, 'This account is no longer available.');
 }
 async function create(tx: Executor, red: string, black: string | null, now: number): Promise<GameRow> {
@@ -188,9 +188,14 @@ export async function queue(db: Database, user: string, cancel = false, rated = 
 export async function savePractice(db: Database, user: string, id: string, moves: Move[], label: string) {
   let state: GameState;
   try { state = replay(moves); } catch { throw new ServiceError(422, 'This replay contains an illegal move or continues after the game ended.'); }
-  const rows = await db.query('INSERT INTO practice(id,user_id,label,moves,reason) VALUES($1,$2,$3,$4::text::jsonb,$5) ON CONFLICT(id) DO UPDATE SET moves=excluded.moves,reason=excluded.reason WHERE practice.user_id=excluded.user_id RETURNING id', [id,user,label,JSON.stringify(moves),state.outcome?.reason ?? null]);
-  if (!rows.length) throw new ServiceError(409, 'Save ID is already in use.');
-  return { id };
+  return db.transaction(async tx => {
+    // Serialize with deletion: an already-authenticated request must not recreate
+    // private practice data after its account has been erased.
+    await requireAccount(tx, user, true);
+    const rows = await tx.query('INSERT INTO practice(id,user_id,label,moves,reason) VALUES($1,$2,$3,$4::text::jsonb,$5) ON CONFLICT(id) DO UPDATE SET moves=excluded.moves,reason=excluded.reason WHERE practice.user_id=excluded.user_id RETURNING id', [id,user,label,JSON.stringify(moves),state.outcome?.reason ?? null]);
+    if (!rows.length) throw new ServiceError(409, 'Save ID is already in use.');
+    return { id };
+  });
 }
 export async function history(db: Database, user: string, offset: number): Promise<HistoryGame[]> {
   const online = await db.query<GameRow>(`${gameSql} WHERE g.red_id=$1 OR g.black_id=$1 ORDER BY g.created_at DESC LIMIT $2`, [user, offset + 21]);

@@ -1,4 +1,4 @@
-import { afterLegalMove, legalMoves, type Move, type Position } from './rules';
+import { afterLegalMove, inCheck, legalMoves, type Move, type Position } from './rules';
 import { evaluation } from './cpu';
 export type MoveAnalysis = { ply: number; move: Move; best: Move; redScore: number; loss: number; depth: number; label: string };
 const same = (a: Move, b: Move) => a.from === b.from && a.to === b.to;
@@ -9,14 +9,24 @@ export function analyzeMove(position: Position, played: Move, ply: number, now =
   const deadline = now() + 450;
   let nodes = 0, aborted = false, depth = 0;
   let values = roots.map(move => -evaluation(afterLegalMove(position, move)));
-  function search(p: Position, remaining: number, alpha: number, beta: number, distance: number): number {
+  function search(p: Position, remaining: number, alpha: number, beta: number, distance: number, extension = 0): number {
     if (++nodes > 18000 || (nodes % 32 === 0 && now() > deadline)) { aborted = true; return 0; }
-    const moves = legalMoves(p);
+    let moves = legalMoves(p);
     if (!moves.length) return -100000 + distance;
-    if (!remaining) return evaluation(p);
+    if (!remaining) {
+      // Resolve short exchanges before scoring material. A temporary capture is not
+      // a free piece if the opponent can recapture on the next move.
+      if (extension >= 4) return evaluation(p);
+      if (!inCheck(p)) {
+        const standPat = evaluation(p);
+        if (standPat >= beta) return standPat;
+        alpha = Math.max(alpha, standPat);
+        moves = moves.filter(move => p.board[move.to] !== null);
+      }
+    }
     moves.sort((a, b) => Number(Boolean(p.board[b.to])) - Number(Boolean(p.board[a.to])));
     for (const move of moves) {
-      const value = -search(afterLegalMove(p, move), remaining - 1, -beta, -alpha, distance + 1);
+      const value = -search(afterLegalMove(p, move), Math.max(0, remaining - 1), -beta, -alpha, distance + 1, remaining ? 0 : extension + 1);
       if (aborted) return 0;
       alpha = Math.max(alpha, value);
       if (alpha >= beta) break;

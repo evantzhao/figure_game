@@ -2,7 +2,7 @@
 
 Product name: **Chinese Chess**. The historical report below predates deployment and must not be used as the current hosting status. Use [BACKLOG.md](BACKLOG.md) for remaining work and verification.
 
-Implemented on this change branch: mutual rematches; share/copy/selectable invitation links; reconnect controls and request timeouts; one-time recovery codes; account deletion with shared-record anonymization; private casual-timeout SQL function and opt-in Cron installer; locally computed post-game analysis. The application requires the additive migration before deployment. Rated play remains disabled.
+Implemented on this change branch: mutual rematches; share/copy/selectable invitation links; reconnect controls and request timeouts; one-time recovery codes; account deletion with shared-record anonymization; private casual-timeout SQL function and opt-in Cron installer; locally computed post-game analysis. The additive migration was applied to the existing Supabase project on October 2, and the private one-minute timeout Cron job has a verified successful run. Rated play remains disabled.
 
 The public custom domain exists. The live `/api/me` check on October 2 still returned 503 / online unavailable after the reported environment update, so live two-client play is not verified. The old statements that no Vercel or Supabase project exists are historical and superseded.
 

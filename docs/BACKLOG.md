@@ -11,7 +11,7 @@ Updated 2026-10-02. “Implemented” means in this PR, not necessarily deployed
 | Post-game analysis | Implemented | Local worker only, move evaluations, suggested alternatives, progress, cancellation and replay; no analysis persistence/network calls. Lightweight search, not a strong competition engine. |
 | Password recovery | Implemented via recovery codes | Password-verified code creation; single-use reset and all-session revocation. Users without a saved code still cannot recover. Verified-email recovery remains a separate auth migration. |
 | Account deletion | Implemented | Password/confirmation, active-game guard, private-data removal, session revocation, shared-game anonymization. |
-| Automatic timeouts | Implementation ready | Private invoker-only function and one-minute Supabase Cron installer. Verify hosted job/run status before marking enabled. |
+| Automatic timeouts | Enabled in Supabase | Migration applied; named Cron job active every minute; first run succeeded at 2026-10-02 05:20 UTC. Browser execution denied; security advisor clear. |
 | Live two-player play | Blocked by deployed configuration | `/api/me` returned 503 on Oct 2. Verify exact Production DATABASE_URL environment and redeployed commit; then signup/invite/moves/reconnect/result/history on the live custom domain. |
 | Mobile verification | Browser coverage added | Chromium plus mobile WebKit CI. Actual iPhone Safari touch/audio/background-resume must still be checked on a device. |
 | Rated games / leaderboard launch | Blocked by rule conformance | Movement differential and exactly-once rating tests pass; no complete WXF chase/no-progress fixtures. Keep hard gate off. |
@@ -32,6 +32,7 @@ Do not convert ambiguous repetitions into draws or silently rename the current c
 ## Local evidence
 
 - TypeScript, lint, production build and compact suite run for this PR; exact final counts/results are recorded in its description.
+- Hosted additive migration version `20261002050221` verified. Cron `chinese-chess-casual-timeouts` is active, and its first run succeeded. No test fixtures were created in the live database.
 - Local Chromium download returned invalid/truncated archives. Browser execution is delegated to ordinary GitHub Actions against disposable Postgres, never live credentials.
 - WebKit emulation is not physical iOS Safari verification. Audio hardware/autoplay and background suspension require a device check.
 

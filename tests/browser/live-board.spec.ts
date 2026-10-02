@@ -42,6 +42,7 @@ test('an opponent move returns a reviewed online game to live', async ({ browser
   await createAccount(black, `review_black_${stamp}`);
   await red.getByRole('tab', { name: 'Friend', exact: true }).click();
   await red.getByRole('button', { name: 'Create invitation' }).click();
+  await expect(red).toHaveURL(/\/game\//);
   await black.goto(red.url());
   await expect(red.getByText('Your moves are saved automatically.', { exact: false })).toBeVisible();
 

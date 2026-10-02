@@ -11,7 +11,8 @@ async function signUp(page: Page, username: string) {
  await page.getByLabel('Username').fill(username);
  await page.getByLabel('Password', { exact: true }).fill('unique browser test password');
  await page.getByRole('button', { name: 'Create account', exact: true }).click();
- await expect(page).toHaveURL('http://127.0.0.1:3100/');
+ await expect(page).toHaveURL('http://127.0.0.1:3100/account');
+ await page.getByRole('link', { name: 'Back to the board' }).click();
 }
 
 test('guest CPU replies legally, replay works, and mobile board fits', async ({ page }) => {
@@ -66,9 +67,17 @@ test('two accounts join, exchange moves, reconnect, resign, and see saved histor
   await red.getByRole('button', { name: 'Resign', exact: true }).click();
   await expect(red.getByRole('heading', { name: 'Black wins.' })).toBeVisible();
   await expect(black.getByRole('heading', { name: 'Black wins.' })).toBeVisible();
+  await red.getByRole('button',{name:'Analyze game',exact:true}).click();
+  await expect(red.getByText('Analyzed 2 moves.',{exact:true})).toBeVisible({timeout:15000});
+  await red.getByRole('button',{name:'Close analysis',exact:true}).click();
+  await red.getByRole('button',{name:'Offer rematch',exact:true}).click();
+  await black.getByRole('button',{name:'Accept rematch',exact:true}).click();
+  await expect(red).toHaveURL(black.url());
+  await expect(red.getByText('You are playing black.',{exact:false})).toBeVisible();
+  await expect(red.getByRole('button',{name:'Analyze game',exact:true})).toHaveCount(0);
   await black.goto('/history');
   await expect(black.getByText(/2 ply · resignation/)).toBeVisible();
-  await black.getByRole('button', { name: 'Replay' }).click();
+  await black.getByRole('button', { name: 'Replay' }).first().click();
   await expect(black.getByRole('group', { name: /^Xiangqi board/ })).toBeVisible();
  } finally { await a.close(); await b.close(); }
 });

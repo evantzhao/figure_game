@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { migrate } from '@/server/migrations';
 import { PGlite } from '@electric-sql/pglite';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { connectPostgres, pgliteDatabase, type Database } from '@/server/db';
-import { authenticate, login, logout, rateLimit, register } from '@/server/auth';
-import { command, createChallenge, getGame, history, joinGame, queue, savePractice } from '@/server/games';
+import { createRecoveryCode, recoverAccount, deleteAccount, authenticate, login, logout, rateLimit, register } from '@/server/auth';
+import { sweep, command, createChallenge, getGame, history, joinGame, queue, savePractice } from '@/server/games';
 import { parseMove } from '@/domain/xiangqi/rules';
 import type { Command } from '@/domain/contracts';
 
@@ -20,12 +20,12 @@ beforeAll(async () => {
    throw new Error('Destructive service fixtures require localhost/figure_chess_test; hosted databases are forbidden.');
   }
   db = await connectPostgres(testUrl);
-  await db.query(await readFile('db/migrations/001_initial.sql', 'utf8'));
+  await migrate(db);
   return;
  }
  const pg = new PGlite();
- await pg.exec(await readFile('db/migrations/001_initial.sql', 'utf8'));
  db = pgliteDatabase(pg);
+ await migrate(db);
 });
 afterAll(async () => { await db?.close(); });
 beforeEach(async () => {
@@ -182,5 +182,99 @@ describe(`database-backed prototype services (${process.env.TEST_DATABASE_URL ? 
   expect(accounts.map(row => row.rating).sort()).toEqual([1484, 1516]);
   expect(accounts.every(row => row.rated_games === 1)).toBe(true);
   expect(await db.query('SELECT * FROM active_players')).toHaveLength(0);
+ });
+});
+
+describe('account lifecycle, rematches, and scheduled settlement', () => {
+ it('recovery codes rotate, are single-use, and revoke every old session', async () => {
+  const a = await register(db, 'recover_me', 'old long password');
+  const first = await createRecoveryCode(db, a.user.id, 'old long password');
+  const second = await createRecoveryCode(db, a.user.id, 'old long password');
+  await expect(recoverAccount(db, 'recover_me', first.recoveryCode, 'new long password')).rejects.toMatchObject({status:401});
+  const attempts = await Promise.allSettled([0,1].map(() => recoverAccount(db, 'recover_me', second.recoveryCode, 'new long password')));
+  expect(attempts.filter(result=>result.status==='fulfilled')).toHaveLength(1);
+  expect(await authenticate(db, a.token)).toBeNull();
+  await expect(login(db,'recover_me','old long password')).rejects.toMatchObject({status:401});
+  expect((await login(db,'recover_me','new long password')).user.id).toBe(a.user.id);
+  expect((await db.query('SELECT recovery_hash FROM accounts WHERE id=$1',[a.user.id]))[0].recovery_hash).toBeNull();
+ });
+ it('deletion verifies password, refuses active games, erases private data, and anonymizes shared history', async () => {
+  const a=await register(db,'delete_me','long delete password');
+  const waiting=await createChallenge(db,a.user.id);
+  await expect(deleteAccount(db,a.user.id,'wrong long password')).rejects.toMatchObject({status:401});
+  await expect(deleteAccount(db,a.user.id,'long delete password')).rejects.toMatchObject({status:409});
+  const game=await joinGame(db,black,waiting.id);
+  await command(db,a.user.id,game.id,action(game.version,'resign'));
+  await savePractice(db,a.user.id,randomUUID(),[],'Private title');
+  await createRecoveryCode(db,a.user.id,'long delete password');
+  await deleteAccount(db,a.user.id,'long delete password');
+  expect(await authenticate(db,a.token)).toBeNull();
+  await expect(login(db,'delete_me','long delete password')).rejects.toMatchObject({status:401});
+  await expect(createChallenge(db,a.user.id)).rejects.toMatchObject({status:401});
+  expect(await db.query('SELECT * FROM practice WHERE user_id=$1',[a.user.id])).toHaveLength(0);
+  expect(await db.query('SELECT * FROM commands WHERE user_id=$1',[a.user.id])).toHaveLength(0);
+  const records=await history(db,black,0);
+  expect(records[0].label).not.toContain('delete_me');
+  expect(records[0].label).toContain('deleted_');
+ });
+ it('requires mutual rematch consent, swaps sides, and deduplicates concurrent acceptance', async () => {
+  const game=await table();
+  await expect(command(db,red,game.id,action(game.version,'offer-rematch'))).rejects.toMatchObject({status:409});
+  const ended=await command(db,red,game.id,action(game.version,'resign'));
+  await expect(command(db,outsider,game.id,action(ended.version,'offer-rematch'))).rejects.toMatchObject({status:403});
+  const offer=await command(db,red,game.id,action(ended.version,'offer-rematch'));
+  await expect(command(db,red,game.id,action(offer.version,'accept-rematch'))).rejects.toMatchObject({status:409});
+  const input=action(offer.version,'accept-rematch');
+  const results=await Promise.all([command(db,black,game.id,input),command(db,black,game.id,input)]);
+  expect(results[0].rematch_id).toBe(results[1].rematch_id);
+  const next=await getGame(db,red,results[0].rematch_id!);
+  expect(next).toMatchObject({red_id:black,black_id:red,status:'active',rated:false});
+  expect(await db.query('SELECT * FROM active_players')).toHaveLength(2);
+  expect(await db.query('SELECT * FROM games')).toHaveLength(2);
+ });
+ it('a rematch cannot steal a seat from another active game and a declined offer cannot be accepted', async () => {
+  const game=await table();
+  const ended=await command(db,red,game.id,action(game.version,'resign'));
+  const offered=await command(db,red,game.id,action(ended.version,'offer-rematch'));
+  const declined=await command(db,black,game.id,action(offered.version,'decline-rematch'));
+  await expect(command(db,black,game.id,action(declined.version,'accept-rematch'))).rejects.toMatchObject({status:409});
+  const reoffered=await command(db,red,game.id,action(declined.version,'offer-rematch'));
+  await createChallenge(db,black);
+  await expect(command(db,black,game.id,action(reoffered.version,'accept-rematch'))).rejects.toMatchObject({status:409});
+ });
+ it('scheduled settlement skips live clocks, settles an overdue game beyond 100 newer deadlines, and is idempotent', async () => {
+  const game=await table();
+  await db.query(`INSERT INTO games(id,red_id,black_id,status,state,turn_started,ruleset,created_at)
+    SELECT gen_random_uuid(),red_id,black_id,status,state,turn_started+3600000,ruleset,created_at-interval '1 minute' FROM games CROSS JOIN generate_series(1,110) WHERE id=$1`,[game.id]);
+  await db.query('UPDATE games SET red_ms=0 WHERE id=$1',[game.id]);
+  expect((await db.query('SELECT chess_private.settle_casual_timeouts() AS count'))[0].count).toBe(1);
+  const ended=await getGame(db,black,game.id);
+  expect(ended).toMatchObject({status:'finished',winner:'black',reason:'timeout',version:game.version+1});
+  expect((await db.query('SELECT chess_private.settle_casual_timeouts() AS count'))[0].count).toBe(0);
+  expect(await sweep(db)).toEqual({finished:0});
+  expect(await db.query('SELECT * FROM rating_events')).toHaveLength(0);
+ });
+ it('scheduled settlement races safely with a terminal command and excludes rated games', async () => {
+  const game=await table();
+  await db.query('UPDATE games SET red_ms=0 WHERE id=$1',[game.id]);
+  await Promise.all([db.transaction(tx=>tx.query('SELECT chess_private.settle_casual_timeouts()')),command(db,black,game.id,action(game.version,'resign'))]);
+  expect(await getGame(db,red,game.id)).toMatchObject({winner:'black',reason:'timeout',version:game.version+1});
+  const next=await table();
+  await db.query('UPDATE games SET rated=true,red_ms=0 WHERE id=$1',[next.id]);
+  expect((await db.query('SELECT chess_private.settle_casual_timeouts() AS count'))[0].count).toBe(0);
+  expect(await sweep(db)).toEqual({finished:1});
+  expect(await db.query('SELECT * FROM rating_events')).toHaveLength(2);
+ });
+});
+
+describe('additive migration compatibility', () => {
+ it('can be reapplied without losing existing accounts, moves, or sessions', async () => {
+  const account=await register(db,'upgrade_user','upgrade test password');
+  const game=await table();
+  await command(db,red,game.id,action(game.version));
+  await migrate(db);
+  expect(await authenticate(db,account.token)).toEqual(account.user);
+  expect((await getGame(db,red,game.id)).state.moves).toEqual([parseMove('a3a4')]);
+  expect((await db.query('SELECT recovery_hash,deleted_at FROM accounts WHERE id=$1',[account.user.id]))[0]).toMatchObject({recovery_hash:null,deleted_at:null});
  });
 });

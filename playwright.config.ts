@@ -1,4 +1,4 @@
-import { defineConfig } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -16,7 +16,11 @@ export default defineConfig({
  fullyParallel: false,
  workers: 1,
  timeout: 60000,
- use: { baseURL: 'http://127.0.0.1:3100', channel: 'chromium', trace: 'retain-on-failure' },
+ use: { baseURL: 'http://127.0.0.1:3100', trace: 'retain-on-failure' },
+ projects: [
+  {name:'chromium',testIgnore:/mobile\.spec\.ts/,use:{browserName:'chromium',channel:'chromium'}},
+  {name:'mobile-webkit',testMatch:/mobile\.spec\.ts/,use:{...devices['iPhone 13'],browserName:'webkit'}},
+ ],
  webServer: {
   command: 'npm run start -- --port 3100',
   url: 'http://127.0.0.1:3100',

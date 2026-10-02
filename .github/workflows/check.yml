@@ -57,7 +57,7 @@ jobs:
         run: npm run build
       - name: Install browser for focused journeys
         if: steps.scope.outputs.code == 'true'
-        run: npx playwright install --with-deps --no-shell chromium
+        run: npx playwright install --with-deps --no-shell chromium webkit
       - name: Verify CPU, mobile layout, and two-player flow
         if: steps.scope.outputs.code == 'true'
         run: npm run test:browser

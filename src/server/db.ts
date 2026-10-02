@@ -1,11 +1,11 @@
 import postgres from 'postgres';
 import type { PGlite } from '@electric-sql/pglite';
 export type Row = Record<string, unknown>;
-export interface Executor { query<T extends Row = Row>(text: string, values?: unknown[]): Promise<T[]> }
+export interface Executor { script(text: string): Promise<void>; query<T extends Row = Row>(text: string, values?: unknown[]): Promise<T[]> }
 export interface Database extends Executor { transaction<T>(run: (tx: Executor) => Promise<T>): Promise<T>; close(): Promise<void> }
 export class ServiceError extends Error { constructor(public status: number, message: string) { super(message); } }
 function postgresExecutor(sql: postgres.Sql | postgres.TransactionSql): Executor {
-  return { async query<T extends Row>(text: string, values: unknown[] = []) {
+  return { async script(text: string) { await sql.unsafe(text).simple(); }, async query<T extends Row>(text: string, values: unknown[] = []) {
     return [...await sql.unsafe<T[]>(text, values as postgres.ParameterOrJSON<never>[])] as T[];
   } };
 }
@@ -19,7 +19,7 @@ export async function connectPostgres(url: string): Promise<Database> {
 export function pgliteDatabase(pg: PGlite): Database {
   // PGlite is one embedded connection; serialize its transactions locally. Hosted Postgres uses row locks.
   let tail = Promise.resolve();
-  const exec = (client: Pick<PGlite, 'query'>): Executor => ({ async query<T extends Row>(text: string, values: unknown[] = []) { return (await client.query<T>(text, values)).rows; } });
+  const exec = (client: Pick<PGlite, 'query' | 'exec'>): Executor => ({ async script(text: string) { await client.exec(text); }, async query<T extends Row>(text: string, values: unknown[] = []) { return (await client.query<T>(text, values)).rows; } });
   return { ...exec(pg), async transaction<T>(run: (tx: Executor) => Promise<T>) {
     const previous = tail; let release: () => void = () => {};
     tail = new Promise<void>(resolve => { release = resolve; });
@@ -34,10 +34,11 @@ export async function getDb(): Promise<Database> {
   if (!cache.figureDatabase) cache.figureDatabase = (async () => {
     if (process.env.DATABASE_URL) return connectPostgres(process.env.DATABASE_URL);
     const { PGlite } = await import('@electric-sql/pglite');
-    const { readFile } = await import('node:fs/promises');
+    const { migrate } = await import('./migrations');
     const pg = new PGlite(process.env.LOCAL_DATABASE_PATH || '.local-db');
-    await pg.exec(await readFile('db/migrations/001_initial.sql', 'utf8'));
-    return pgliteDatabase(pg);
+    const db = pgliteDatabase(pg);
+    await migrate(db);
+    return db;
   })().catch(error => { delete cache.figureDatabase; throw error; });
   return cache.figureDatabase;
 }

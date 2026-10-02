@@ -1,4 +1,4 @@
-# Figure Chess
+# Chinese Chess
 
 A board-first, casual Xiangqi prototype built with Next.js, React, and strict TypeScript.
 
@@ -11,7 +11,7 @@ npm ci
 npm run dev
 ```
 
-Open http://localhost:3000. Development automatically initializes embedded Postgres in `.local-db/`. CPU and same-device play need no account. Create two distinct username/password accounts in separate browser profiles to try invitations or the casual 10+5 queue. There is no password recovery; use unique test passwords.
+Open http://localhost:3000. Development automatically initializes embedded Postgres in `.local-db/`. CPU and same-device play need no account. Create two distinct username/password accounts in separate browser profiles to try invitations or the casual 10+5 queue. Generate a one-time recovery code from Account and save it in a password manager. Recovery codes can reset a forgotten password; no email is collected.
 
 ## Included
 
@@ -34,7 +34,7 @@ npm run check          # TypeScript, ESLint, compact Vitest suite
 npm run test:rules     # Rules/CPU/rating fixtures and independent legal-move comparison
 npm run test:services  # Embedded Postgres auth/game/persistence checks
 npm run build         # Production compilation and route generation
-npx playwright install chromium
+npx playwright install chromium webkit
 npm run test:browser   # Focused CPU/mobile and two-account online journeys
 ```
 
@@ -69,3 +69,13 @@ Original static landing-page files are retained as legacy assets; Next.js is the
 - [Agent development instructions](AGENTS.md)
 
 The production plan is a target, not a claim that all milestones have shipped.
+
+## Chinese Chess completion update
+
+The app includes shareable invitations, mutual rematches with swapped colors, reconnect controls, single-use recovery codes, and password-confirmed account deletion. After a game, choose **Analyze game** to run an approximate engine locally in a Worker. Analysis is not uploaded, saved, or available during live online play. Existing session/storage keys are retained for compatibility with the former product name.
+
+Before deploying this branch, run `npm run db:migrate` against the explicitly selected hosted database. The additive migration is `db/migrations/20261002050221_account_recovery_and_rematches.sql`. Never put the live database URL in PR preview or test environments. Local development applies all migrations automatically; production builds never apply migrations.
+
+To settle abandoned casual games, run `db/operations/enable_timeout_cron.sql` in the intended Supabase SQL editor after the migration. It schedules the private invoker-only function once per minute. Deadlines still decide the result; polling settles timeouts immediately for connected players. The cron function deliberately excludes rated rows. Verify the Cron job and successful run records before claiming scheduling is active.
+
+See [the current backlog and acceptance evidence](docs/BACKLOG.md). Full WXF chase/no-progress adjudication, verified-email accounts, and actual iPhone Safari testing remain launch gates. Keeping rated play disabled is intentional.

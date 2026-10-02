@@ -6,7 +6,8 @@ async function createAccount(page: Page, username: string) {
  await page.getByLabel('Username').fill(username);
  await page.getByLabel('Password', { exact: true }).fill('browser-test-only-passphrase');
  await page.getByRole('button', { name: 'Create account', exact: true }).click();
- await expect(page).toHaveURL('http://127.0.0.1:3100/');
+ await expect(page).toHaveURL('http://127.0.0.1:3100/account');
+ await page.getByRole('link', { name: 'Back to the board' }).click();
 }
 
 test('plain arrows review from board focus and sound preference persists', async ({ page }) => {

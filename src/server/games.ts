@@ -44,6 +44,10 @@ async function existing(tx: Executor, user: string): Promise<string | null> {
   await settle(tx, game, await databaseNow(tx));
   return ['waiting','active'].includes(game.status) ? game.id : null;
 }
+async function requireAccount(tx: Executor, user: string) {
+  const [account] = await tx.query('SELECT id FROM accounts WHERE id=$1 AND deleted_at IS NULL', [user]);
+  if (!account) throw new ServiceError(401, 'This account is no longer available.');
+}
 async function create(tx: Executor, red: string, black: string | null, now: number): Promise<GameRow> {
   const id = randomUUID();
   // Bind encoded JSON as text before casting: postgres.js otherwise JSON-encodes the string again.
@@ -55,6 +59,7 @@ async function create(tx: Executor, red: string, black: string | null, now: numb
 export async function createChallenge(db: Database, user: string): Promise<OnlineGame> {
   return db.transaction(async tx => {
     await tx.query('SELECT id FROM queue_guard WHERE id=1 FOR UPDATE');
+    await requireAccount(tx, user);
     const current = await existing(tx, user);
     const now = await databaseNow(tx);
     if (current) return { ...await loadGame(tx, current), serverNow: now };
@@ -65,6 +70,7 @@ export async function createChallenge(db: Database, user: string): Promise<Onlin
 export async function joinGame(db: Database, user: string, id: string): Promise<OnlineGame> {
   return db.transaction(async tx => {
     await tx.query('SELECT id FROM queue_guard WHERE id=1 FOR UPDATE');
+    await requireAccount(tx, user);
     const current = await existing(tx, user);
     if (current && current !== id) throw new ServiceError(409, 'Finish or cancel your current game first.');
     const game = await loadGame(tx, id, true), now = await databaseNow(tx);
@@ -91,11 +97,41 @@ export async function invitation(db: Database, id: string) {
 }
 export async function command(db: Database, user: string, id: string, input: Command): Promise<OnlineGame> {
   return db.transaction(async tx => {
+    const rematch = input.action.endsWith('rematch');
+    if (rematch) {
+      await tx.query('SELECT id FROM queue_guard WHERE id=1 FOR UPDATE');
+      await requireAccount(tx, user);
+    }
     const game = await loadGame(tx, id, true), color = player(game, user);
     const hash = digest(JSON.stringify({ game: id, ...input }));
     const [receipt] = await tx.query<{ payload_hash: string; response: OnlineGame }>('SELECT payload_hash,response FROM commands WHERE user_id=$1 AND command_id=$2', [user, input.commandId]);
     if (receipt) { if (receipt.payload_hash !== hash) throw new ServiceError(409, 'Command ID has already been used for another action.'); return receipt.response; }
     const now = await databaseNow(tx); await settle(tx, game, now);
+    if (rematch) {
+      if (game.status !== 'finished' || !game.black_id) throw new ServiceError(409, 'Only a completed two-player game can be rematched.');
+      if (game.rematch_id) return { ...game, serverNow: now };
+      if (game.version !== input.version) throw new ServiceError(409, 'The rematch changed. Refresh and try again.');
+      await requireAccount(tx, game.red_id);
+      await requireAccount(tx, game.black_id);
+      if (input.action === 'offer-rematch') {
+        if (await existing(tx, user)) throw new ServiceError(409, 'Finish your current game first.');
+        if (game.rematch_by && game.rematch_by !== user) throw new ServiceError(409, 'Your opponent has already offered a rematch. Accept their offer.');
+        game.rematch_by = user;
+      } else if (input.action === 'accept-rematch') {
+        if (!game.rematch_by || game.rematch_by === user) throw new ServiceError(409, 'There is no opponent rematch offer to accept.');
+        if (await existing(tx, game.red_id) || await existing(tx, game.black_id)) throw new ServiceError(409, 'Both players must finish their other games first.');
+        await tx.query('DELETE FROM queue_tickets WHERE user_id=$1 OR user_id=$2', [game.red_id, game.black_id]);
+        game.rematch_id = (await create(tx, game.black_id, game.red_id, now)).id;
+        game.rematch_by = null;
+      } else {
+        game.rematch_by = null;
+      }
+      game.version++;
+      await tx.query('UPDATE games SET rematch_by=$2,rematch_id=$3,version=$4,updated_at=now() WHERE id=$1', [id, game.rematch_by, game.rematch_id, game.version]);
+      const response = { ...game, serverNow: now };
+      await tx.query('INSERT INTO commands(user_id,command_id,payload_hash,response) VALUES($1,$2,$3,$4::text::jsonb)', [user, input.commandId, hash, JSON.stringify(response)]);
+      return response;
+    }
     if (!['active','waiting'].includes(game.status)) return { ...game, serverNow: now };
     if (game.version !== input.version) throw new ServiceError(409, 'The position changed. Reconnect and try again.');
     if (input.action === 'cancel') {
@@ -132,6 +168,7 @@ export async function queue(db: Database, user: string, cancel = false, rated = 
   if (rated && !RATED_AVAILABLE) throw new ServiceError(409, 'Rated play is locked until competition-rule verification is complete.');
   return db.transaction(async tx => {
     await tx.query('SELECT id FROM queue_guard WHERE id=1 FOR UPDATE');
+    await requireAccount(tx, user);
     const current = await existing(tx, user);
     if (current) return { gameId: current, queued: false, since: null };
     if (cancel) { await tx.query('DELETE FROM queue_tickets WHERE user_id=$1', [user]); return { gameId: null, queued: false, since: null }; }
@@ -164,10 +201,10 @@ export async function history(db: Database, user: string, offset: number): Promi
   ];
   return rows.sort((a,b)=>new Date(b.created_at).getTime()-new Date(a.created_at).getTime()).slice(offset,offset+21);
 }
-export async function leaderboard(db: Database) { return db.query<Account>('SELECT id,username,rating,rated_games FROM accounts WHERE rated_games>=10 ORDER BY rating DESC,username LIMIT 50'); }
+export async function leaderboard(db: Database) { return db.query<Account>('SELECT id,username,rating,rated_games FROM accounts WHERE rated_games>=10 AND deleted_at IS NULL ORDER BY rating DESC,username LIMIT 50'); }
 export async function sweep(db: Database) {
   return db.transaction(async tx => {
-    const ids = await tx.query<{id:string}>('SELECT id FROM games WHERE status IN (\'active\',\'waiting\') ORDER BY created_at LIMIT 100 FOR UPDATE SKIP LOCKED');
+    const ids = await tx.query<{id:string}>(`SELECT id FROM games WHERE (status='waiting' AND created_at <= now()-interval '30 minutes') OR (status='active' AND turn_started + CASE WHEN state->'position'->>'turn'='red' THEN red_ms ELSE black_ms END <= EXTRACT(EPOCH FROM clock_timestamp())*1000) ORDER BY created_at LIMIT 100 FOR UPDATE SKIP LOCKED`);
     let finished = 0;
     for (const {id} of ids) { const game = await loadGame(tx,id); const before=game.status; await settle(tx,game,await databaseNow(tx)); if(game.status!==before) finished++; }
     return { finished };

@@ -1,3 +1,13 @@
+# Current status — 2026-10-02
+
+Product name: **Chinese Chess**. The historical report below predates deployment and must not be used as the current hosting status. Use [BACKLOG.md](BACKLOG.md) for remaining work and verification.
+
+Implemented on this change branch: mutual rematches; share/copy/selectable invitation links; reconnect controls and request timeouts; one-time recovery codes; account deletion with shared-record anonymization; private casual-timeout SQL function and opt-in Cron installer; locally computed post-game analysis. The application requires the additive migration before deployment. Rated play remains disabled.
+
+The public custom domain exists. The live `/api/me` check on October 2 still returned 503 / online unavailable after the reported environment update, so live two-client play is not verified. The old statements that no Vercel or Supabase project exists are historical and superseded.
+
+---
+
 # Prototype implementation status
 
 Date: 2026-09-22. This is a casual prototype for review, not a production or rated release.
@@ -12,7 +22,7 @@ The browser run caught same-site signup rejection caused by comparing Origin to 
 
 Added checks include distinct Postgres backend connections, simultaneous pairing, cancellation versus matching, and fixture-only exactly-once rating finalization. Rated play stays unavailable to users. Both browser journeys run against real Postgres in CI; desktop/mobile screenshots and failure traces are available in each run's browser-evidence artifact. The original embedded/local limits below do not describe the new CI configuration.
 
-Hosted launch remains blocked: the connected Vercel team has no Figure Chess project, the connector deployment action is unavailable, and the CLI has no credentials. The connected Supabase organization has no Figure Chess project. Organization/cost confirmation and working deployment authorization are required before provisioning. Existing unrelated projects were not modified. These are CI tests, not a live hosted preview or actual iOS Safari verification.
+Hosted launch remains blocked: the connected Vercel team has no Chinese Chess project, the connector deployment action is unavailable, and the CLI has no credentials. The connected Supabase organization has no Chinese Chess project. Organization/cost confirmation and working deployment authorization are required before provisioning. Existing unrelated projects were not modified. These are CI tests, not a live hosted preview or actual iOS Safari verification.
 
 ## Implemented
 

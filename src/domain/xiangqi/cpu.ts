@@ -1,6 +1,6 @@
 import { afterLegalMove, legalMoves, type Position, type Move } from './rules';
 const VALUE = { k: 10000, r: 900, c: 450, n: 400, b: 200, a: 200, p: 100 };
-function evaluation(position: Position): number {
+export function evaluation(position: Position): number {
   return position.board.reduce((sum, piece, i) => {
     if (!piece) return sum;
     const advance = piece.color === 'red' ? 9 - Math.floor(i / 9) : Math.floor(i / 9);

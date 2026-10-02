@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { accountSchema, commandSchema, moveSchema } from '@/domain/contracts';
 import { RATED_AVAILABLE } from '@/domain/xiangqi/rules';
-import { authenticate, register, login, logout, rateLimit, SESSION_COOKIE, SESSION_SECONDS, digest } from '@/server/auth';
+import { createRecoveryCode, recoverAccount, deleteAccount, authenticate, register, login, logout, rateLimit, SESSION_COOKIE, SESSION_SECONDS, digest } from '@/server/auth';
 import { getDb, backendConfigured, ServiceError } from '@/server/db';
 import * as games from '@/server/games';
 import { isSameOrigin } from '@/server/origin';
@@ -28,11 +28,12 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
     const db=await getDb(), token=request.cookies.get(SESSION_COOKIE)?.value;
     const user=await authenticate(db,token);
     if(route==='me' && !mutation) return json({user});
-    if((route==='register'||route==='login') && mutation) {
-      const input=accountSchema.parse(await body(request));
+    if((route==='register'||route==='login'||route==='recover') && mutation) {
+      const input=(route==='recover'?accountSchema.extend({recoveryCode:z.string().trim().toLowerCase().regex(/^[a-f0-9]{64}$/,'Enter your 64-character recovery code.')}):accountSchema).parse(await body(request));
       const ip=process.env.VERCEL ? request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown' : 'local';
       await rateLimit(db,`auth-ip:${digest(ip)}`,20,60000);
       await rateLimit(db,`auth-user:${input.username}`,10,60000);
+      if(route==='recover' && 'recoveryCode' in input && typeof input.recoveryCode==='string') return json(await recoverAccount(db,input.username,input.recoveryCode,input.password));
       const result=await (route==='register'?register:login)(db,input.username,input.password);
       const response=json({user:result.user}); response.cookies.set(SESSION_COOKIE,result.token,{httpOnly:true,secure:request.nextUrl.protocol==='https:',sameSite:'lax',path:'/',maxAge:SESSION_SECONDS}); return response;
     }
@@ -41,6 +42,13 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
     if(path[0]==='invite' && path.length===2 && !mutation) return json(await games.invitation(db,z.uuid().parse(path[1])));
     if(!user) throw new ServiceError(401,'Sign in to play online and save your games.');
     await rateLimit(db,`requests:${user.id}`,180,60000);
+    if((route==='account/recovery-code'||route==='account/delete') && mutation) {
+      const input=z.object({password:z.string().min(12).max(128)}).strict().parse(await body(request));
+      await rateLimit(db,`account:${user.id}`,5,60000);
+      if(route==='account/recovery-code') return json(await createRecoveryCode(db,user.id,input.password));
+      await deleteAccount(db,user.id,input.password);
+      const response=json({ok:true});response.cookies.set(SESSION_COOKIE,'',{path:'/',maxAge:0,httpOnly:true,sameSite:'lax',secure:request.nextUrl.protocol==='https:'});return response;
+    }
     if(route==='challenge' && mutation) return json(await games.createChallenge(db,user.id));
     if(route==='queue' && mutation) { const input=z.object({cancel:z.boolean().optional(),rated:z.boolean().optional()}).strict().parse(await body(request)); return json(await games.queue(db,user.id,input.cancel,input.rated)); }
     if(route==='history' && !mutation) return json({games:await games.history(db,user.id,z.coerce.number().int().min(0).max(10000).parse(request.nextUrl.searchParams.get('offset')||0))});

@@ -1,7 +1,7 @@
-# Figure Chess: technical delivery plan
+# Chinese Chess: technical delivery plan
 
 Date: 2026-09-22
-State: production target plan. A casual prototype now implements portions of P1–P4; P5 rated play and P6 production launch are not complete. Current implementation, intentional departures, setup, and evidence are in README.md, docs/IMPLEMENTATION_STATUS.md, and docs/decisions/001-prototype-boundaries.md. Historical statements below describe the planning baseline, not current runtime status.
+State: production target plan. The October 2 casual completion implementation and current release gaps are tracked in docs/BACKLOG.md and docs/decisions/002-casual-completion.md. A casual prototype now implements portions of P1–P4; P5 rated play and P6 production launch are not complete. Current implementation, intentional departures, setup, and evidence are in README.md, docs/IMPLEMENTATION_STATUS.md, and docs/decisions/001-prototype-boundaries.md. Historical statements below describe the planning baseline, not current runtime status.
 Product goal: a fast Xiangqi website with CPU practice, live human games, accounts, history, and Elo matchmaking, deployed on Vercel.
 
 ## 1. Verified starting point and scope

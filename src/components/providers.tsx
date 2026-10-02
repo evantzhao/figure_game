@@ -4,8 +4,13 @@ export type User = {id:string;username:string;rating:number;rated_games:number};
 type AppContext = {user:User|null;online:boolean;loading:boolean;refresh:()=>Promise<void>;dark:boolean;toggleTheme:()=>void};
 const Context=createContext<AppContext|null>(null);
 export async function api<T>(path:string, data?:unknown):Promise<T> {
-  const response=await fetch(`/api/${path}`,{method:data===undefined?'GET':'POST',headers:data===undefined?undefined:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data),cache:'no-store'});
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),15000);
+  try {
+  const response=await fetch(`/api/${path}`,{signal:controller.signal,method:data===undefined?'GET':'POST',headers:data===undefined?undefined:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data),cache:'no-store'});
   const value=await response.json(); if(!response.ok) throw new Error(value.error||'Request failed.'); return value as T;
+  } catch(error) { if(controller.signal.aborted) throw new Error('Connection timed out. Reconnect to check whether your action was saved.'); throw error; }
+  finally { clearTimeout(timeout); }
 }
 export function Providers({children}:{children:ReactNode}) {
   const [user,setUser]=useState<User|null>(null),[online,setOnline]=useState(false),[loading,setLoading]=useState(true),[dark,setDark]=useState(false);

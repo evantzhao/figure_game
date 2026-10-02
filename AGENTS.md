@@ -1,4 +1,4 @@
-# Agent instructions for Figure Chess
+# Agent instructions for Chinese Chess
 
 ## Start here
 

@@ -54,3 +54,5 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+Board-first acceptance: play routes must keep the entire board, both clocks, and turn status within the current viewport without scrolling. Size from available height and width; never enforce a minimum board size that overflows short screens. Put setup, explanatory copy, and secondary actions in menus. Test bounding-box bottom edges, not merely board height, and never scroll the board into view to make a layout test pass.

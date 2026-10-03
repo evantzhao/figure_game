@@ -72,3 +72,85 @@
 .analysis-moves{max-height:280px;overflow:auto;border-top:1px solid var(--line)}
 .analysis-moves button{display:flex;flex-wrap:wrap;width:100%;gap:10px;justify-content:space-between;text-align:left;padding:10px;border-bottom:1px solid var(--line);font-size:11px}
 .analysis-moves .current{background:var(--surface-alt);font-weight:700}
+
+/* Playing is a viewport, not a scrolling landing page. Size the board from both axes. */
+body:has(.play-page){height:100dvh;overflow:hidden}
+body:has(.play-page) .site-header{height:52px;padding:0 16px;flex-wrap:nowrap;gap:16px}
+body:has(.play-page) .brand{font-size:19px;gap:8px}
+body:has(.play-page) .brand small{display:none}
+body:has(.play-page) .brand-seal{width:30px;height:30px;font-size:22px;border-radius:7px}
+body:has(.play-page) .site-header nav{position:static;order:initial;height:100%;border:0;gap:22px}
+body:has(.play-page) main{min-height:0;padding:0}
+body:has(.play-page) .site-footer{display:none}
+.play-page{position:relative;height:calc(100dvh - 52px);max-width:none;margin:0;padding:4px max(6px,env(safe-area-inset-right)) max(4px,env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left))}
+.play-layout{display:flex;height:100%;gap:0;justify-content:center;align-items:center}
+.play-page .game-surface{display:grid;grid-template-rows:36px minmax(0,1fr) 36px 40px;height:100%;width:min(100%,calc((100dvh - 176px)*.9));max-width:none;margin:0}
+.board-stage{container-type:size;display:flex;align-items:center;justify-content:center;min-height:0;min-width:0}
+.board-stage .board-frame{width:min(100cqw,calc(100cqh * .9));padding:0;border-radius:5px;container-type:inline-size;flex-shrink:0}
+.board-stage .file-labels{display:none}
+.board-stage .piece-disc{font-size:clamp(9px,5.2cqw,42px)}
+.board-stage .piece-disc small{font-size:clamp(4px,1.2cqw,8px)}
+.play-page .player-bar{height:36px;padding:0 3px;gap:8px;min-width:0}
+.play-page .avatar{width:28px;height:28px;font-size:18px;border-radius:6px}
+.play-page .player-info{min-width:0}
+.play-page .player-info strong{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.play-page .player-info span{font-size:9px;margin:0}
+.play-page .untimed{padding:4px 6px;font-size:8px}
+.play-page .clock{font-size:22px;padding:1px 9px}
+.play-page .board-toolbar{padding:0;gap:4px;min-width:0}
+.play-page .live-status{font-size:11px;min-width:0;line-height:1.2}
+.play-page .live-status i{flex-shrink:0}
+.play-page .board-toolbar>div:last-child{gap:0;flex-shrink:0}
+.game-menu-button{display:flex;align-items:center;justify-content:center;gap:4px;height:36px;padding:0 7px;border:1px solid var(--line);border-radius:6px;font-size:11px}
+.game-dialog{position:fixed;inset:0;margin:auto;width:min(440px,calc(100vw - 24px));max-width:none;max-height:calc(100dvh - 24px);padding:16px;border:1px solid var(--line);border-radius:12px;color:var(--ink);background:var(--bg);overscroll-behavior:contain}
+.game-dialog::backdrop{background:#1119}
+.dialog-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.dialog-heading h2{font-size:22px}
+.game-dialog .side-panel{display:flex;padding:0;gap:12px}
+.game-preferences{display:flex;gap:12px;align-items:center}
+.game-dialog .setup{padding:16px}
+.game-dialog .setup h2{font-size:22px;margin-bottom:14px}
+.game-dialog .setup .micro{display:none}
+.game-dialog .game-actions{flex-wrap:wrap;margin:0}
+.game-links{display:flex;gap:24px;padding:12px 0;font-size:13px}
+.game-alert,.analysis-shortcut{position:absolute;left:50%;transform:translateX(-50%);border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:10px 16px;box-shadow:0 3px 12px #0002;font-size:12px;z-index:2;max-width:90%}
+.game-alert{top:42px;color:var(--accent)}
+.analysis-shortcut{bottom:48px}
+.analysis-dialog{width:min(1050px,calc(100vw - 24px))}
+.analysis-dialog .analysis-panel{max-width:none;margin:0;border:0;padding:0}
+@media(max-width:720px){
+ body:has(.play-page) .site-header nav{display:none}
+ body:has(.play-page) .header-actions{margin-left:auto}
+ .play-page .icon-button{width:30px}
+}
+@media(max-height:480px){
+ .game-menu-button span{display:none}
+ .play-page .live-status{font-size:9px}
+ .play-page .board-toolbar .icon-button{width:25px}
+ .play-page .avatar,.play-page .untimed{display:none}
+}
+
+/* Analysis also reserves a complete board; only its commentary scrolls. */
+.analysis-dialog{height:calc(100dvh - 24px);overflow:hidden;display:none;flex-direction:column}
+.analysis-dialog[open]{display:flex}
+.analysis-dialog .analysis-panel{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 280px;grid-template-rows:auto auto minmax(0,1fr) 40px;gap:8px 16px;overflow:hidden}
+.analysis-dialog .analysis-panel>.card-title{display:none}
+.analysis-dialog .analysis-panel>p{grid-column:2;font-size:11px;margin:0}
+.analysis-dialog .analysis-board{grid-column:1;grid-row:1/4;min-height:0;container-type:size;display:flex;align-items:center;justify-content:center}
+.analysis-dialog .analysis-board .board-frame{width:min(100cqw,calc(100cqh * .9));padding:0;container-type:inline-size}
+.analysis-dialog .analysis-board .file-labels{display:none}
+.analysis-dialog .analysis-board .piece-disc{font-size:clamp(9px,5.2cqw,42px)}
+.analysis-dialog .replay-controls{grid-column:1;grid-row:4;margin:0}
+.analysis-dialog .analysis-insights{grid-column:2;grid-row:3/5;overflow:auto;min-height:0}
+.analysis-dialog .analysis-moves{max-height:none;overflow:visible}
+@media(max-width:720px){
+ .analysis-dialog{padding:10px}
+ .analysis-dialog .dialog-heading h2{font-size:18px}
+ .analysis-dialog .analysis-panel{grid-template-columns:1fr;grid-template-rows:22px minmax(0,1fr) 36px 110px;gap:4px}
+ .analysis-dialog .analysis-panel>p.micro{display:none}
+ .analysis-dialog .analysis-panel>p[role=status]{grid-column:1;grid-row:1}
+ .analysis-dialog .analysis-board{grid-row:2}
+ .analysis-dialog .replay-controls{grid-row:3}
+ .analysis-dialog .analysis-insights{grid-column:1;grid-row:4}
+ .analysis-dialog .analysis-detail{padding:4px 0}
+}

@@ -72,11 +72,12 @@ test('two accounts join, exchange moves, reconnect, resign, and see saved histor
   await red.getByRole('button',{name:'Game menu',exact:true}).click();
   red.once('dialog', dialog => dialog.accept());
   await red.getByRole('button', { name: 'Resign', exact: true }).click();
-  await expect(red.getByRole('heading', { name: 'Black wins.' })).toBeVisible();
+  await expect(red.getByRole('heading', { name: 'You lose', exact:true })).toBeVisible();
   await expect(black.getByText('Black wins',{exact:true})).toBeVisible();
   await red.getByRole('button',{name:'Analyze game',exact:true}).click();
   await expect(red.getByText('Analyzed 2 moves.',{exact:true})).toBeVisible({timeout:15000});
-  await red.getByRole('button',{name:'Close game analysis',exact:true}).click();
+  await expect(red.getByRole('group',{name:/^Xiangqi board/})).toHaveCount(1);
+  await red.getByRole('button',{name:'Close analysis',exact:true}).click();
   await red.getByRole('button',{name:'Game menu',exact:true}).click();
   await red.getByRole('button',{name:'Offer rematch',exact:true}).click();
   await black.getByRole('button',{name:'Game menu',exact:true}).click();

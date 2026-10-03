@@ -1,0 +1,52 @@
+import { expect, test, type Page } from '@playwright/test';
+
+async function move(page:Page,from:string,to:string){
+ await page.getByRole('button',{name:new RegExp(` at ${from}$`)}).click();
+ await page.getByRole('button',{name:new RegExp(` at ${to}, legal destination$`)}).click();
+}
+test('check, same-board analysis, autosave, logout/login and history recovery',async({page})=>{
+ const username=`saved_${Date.now().toString(36)}`;
+ await page.goto('/account');
+ await page.getByRole('button',{name:'New here? Create an account'}).click();
+ await page.getByLabel('Username').fill(username);
+ await page.getByLabel('Password',{exact:true}).fill('disposable signed in test password');
+ await page.getByRole('button',{name:'Create account',exact:true}).click();
+ await page.getByRole('link',{name:'Back to the board'}).click();
+ await page.getByRole('button',{name:'Game menu',exact:true}).click();
+ await page.getByRole('tab',{name:'Friend',exact:true}).click();
+ await page.getByRole('button',{name:'Play on this device'}).click();
+ for(const [from,to] of [['b2','e2'],['e6','e5'],['e3','e4'],['a6','a5'],['e4','e5']])await move(page,from,to);
+ await expect(page.getByRole('button',{name:'black General at e9, in check',exact:true})).toBeVisible();
+ await expect(page.getByText('CHECK',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Game menu',exact:true}).click();
+ page.once('dialog',dialog=>dialog.accept());
+ await page.getByRole('button',{name:'Resign',exact:true}).click();
+ await expect(page.getByText('Saved to your game history.',{exact:true}).first()).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Red wins',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Analyze game',exact:true})).toHaveCount(1);
+ await page.getByRole('button',{name:'Analyze game',exact:true}).click();
+ await expect(page.getByText('Analyzed 5 moves.',{exact:true})).toBeVisible({timeout:15000});
+ await expect(page.getByRole('group',{name:/^Xiangqi board/})).toHaveCount(1);
+ await page.getByRole('slider',{name:'Analysis move'}).fill('1');
+ await expect(page.getByRole('button',{name:'red Cannon at e2',exact:true})).toBeVisible();
+ await page.screenshot({path:'test-results/same-board-analysis.png'});
+ await page.goto('/account');
+ await page.getByRole('button',{name:'Sign out',exact:true}).click();
+ await page.goto('/account');
+ await page.getByLabel('Username').fill(username);
+ await page.getByLabel('Password',{exact:true}).fill('disposable signed in test password');
+ await page.getByRole('button',{name:'Sign in',exact:true}).click();
+ await expect(page).toHaveURL('http://127.0.0.1:3100/');
+ await page.goto('/history');
+ await expect(page.getByText('Same-device game',{exact:true})).toHaveCount(1);
+ await page.getByRole('button',{name:'Replay',exact:true}).click();
+ await page.getByRole('button',{name:'Analyze game',exact:true}).click();
+ await expect(page.getByRole('group',{name:/^Xiangqi board/})).toHaveCount(1);
+ await page.route('**/api/history*',route=>route.fulfill({status:503,json:{error:'Temporary history failure'}}));
+ await page.reload();
+ await expect(page.getByRole('alert')).toContainText('Temporary history failure');
+ await expect(page.getByRole('heading',{name:'A fresh page.'})).not.toBeVisible();
+ await page.unroute('**/api/history*');
+ await page.getByRole('button',{name:'Retry history'}).click();
+ await expect(page.getByText('Same-device game',{exact:true})).toBeVisible();
+});

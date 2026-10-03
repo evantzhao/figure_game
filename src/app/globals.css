@@ -116,6 +116,25 @@ body:has(.play-page) .site-footer{display:none}
 .game-alert,.analysis-shortcut{position:absolute;left:50%;transform:translateX(-50%);border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:10px 16px;box-shadow:0 3px 12px #0002;font-size:12px;z-index:2;max-width:90%}
 .game-alert{top:42px;color:var(--accent)}
 .analysis-shortcut{bottom:48px}
+.board-stage{position:relative}
+.checked{background:radial-gradient(circle,#e23535cc 0%,#df252588 45%,transparent 72%);z-index:3}
+.checked .piece-disc{outline:3px solid #b91c1c;box-shadow:0 0 0 7px #ef444455,0 0 24px #d71919;}
+.piece-disc .check-badge{position:absolute;top:-28%;background:#a91515;color:white;font:700 clamp(7px,1.7cqw,11px)/1.2 sans-serif;letter-spacing:.04em;padding:3px 5px;border-radius:3px;z-index:4}
+.play-page .check-status{color:#b91c1c;font-weight:800;background:#ef44441c;border-radius:5px;padding:5px}
+.check-status i{background:#b91c1c}
+.game-result{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:5;width:min(90%,330px);padding:24px;background:var(--surface);border:2px solid var(--green);box-shadow:0 8px 45px #0006;border-radius:12px;text-align:center;display:flex;flex-direction:column;gap:12px}
+.game-result>span{font-size:11px;letter-spacing:.18em;font-weight:700;color:var(--green)}
+.game-result h2{font-size:36px}.game-result p{font-size:14px}.game-result .text-link{justify-content:center}
+.analysis-workspace{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px;min-width:0;min-height:0;display:flex;flex-direction:column;gap:7px}
+.analysis-heading,.advantage-label{display:flex;justify-content:space-between;align-items:center;gap:10px}.analysis-heading h2{font-size:22px}.advantage-label{font-size:11px}
+.advantage-graph{display:block;width:100%;height:110px;flex-shrink:0;cursor:crosshair;border:1px solid var(--line);border-radius:4px}
+.graph-red{fill:#ad443019}.graph-black{fill:#24324919}.graph-zero{stroke:var(--muted);stroke-dasharray:3 3}.graph-line{fill:none;stroke:var(--green);stroke-width:2;vector-effect:non-scaling-stroke}.graph-point{fill:var(--green)}.graph-cursor{stroke:var(--accent);stroke-width:2;vector-effect:non-scaling-stroke}
+.analysis-slider{display:flex;align-items:center;gap:10px;font-size:11px;white-space:nowrap}.analysis-slider input{min-height:20px;height:20px;padding:0;width:100%;accent-color:var(--accent)}
+.analysis-progress{font-size:11px;color:var(--muted)}.analysis-workspace .analysis-insights{overflow:auto;min-height:0;flex:1}.analysis-workspace .analysis-moves{max-height:none}.analysis-workspace .analysis-detail{padding:5px 0}
+.play-page.analyzing .play-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,340px);gap:16px;max-width:1150px;margin:auto}
+.play-page.analyzing .game-surface{justify-self:center;max-width:100%}.play-page.analyzing .analysis-workspace{height:100%}
+@media(max-width:720px){.play-page.analyzing .play-layout{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) 190px;gap:4px}.play-page.analyzing .game-surface{width:min(100%,calc((100dvh - 370px)*.9))}.analysis-workspace{padding:7px;gap:3px}.advantage-graph{height:48px}.analysis-heading h2{font-size:17px}.analysis-workspace .analysis-insights{min-height:22px}.game-result{padding:12px;gap:8px}.game-result h2{font-size:26px}}
+@media(max-height:480px) and (orientation:landscape){.play-page.analyzing .play-layout{grid-template-columns:minmax(0,1fr) minmax(240px,1fr);grid-template-rows:1fr}.play-page.analyzing .game-surface{width:min(100%,calc((100dvh - 176px)*.9))}.advantage-graph{height:60px}.game-result{padding:8px;gap:5px}.game-result h2{font-size:20px}}
 .analysis-dialog{width:min(1050px,calc(100vw - 24px))}
 .analysis-dialog .analysis-panel{max-width:none;margin:0;border:0;padding:0}
 @media(max-width:720px){

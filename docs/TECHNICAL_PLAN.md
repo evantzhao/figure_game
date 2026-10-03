@@ -211,3 +211,6 @@ Each milestone should be one or a few small PRs with independent evidence. Estim
 - Account/service provisioning, license selection, engine conformance, and verified production email remain implementation prerequisites.
 
 Sources R1-R8 are in docs/RESEARCH.md. The lightweight validation policy is in docs/PR_EVALUATION.md.
+
+### October 2 board-first layout correction
+Play routes use a compact header and a viewport-sized board, with both player clocks and turn status visible without page scrolling. Setup, preferences, move journal, and secondary actions live in a native modal menu; essential connection/offer alerts remain accessible outside it. No marketing panels or footer occupy the playing viewport. Acceptance checks measure the entire board and controls at desktop, portrait, narrow, and landscape sizes, without scrolling them into view first.

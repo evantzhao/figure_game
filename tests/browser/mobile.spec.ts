@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 test('mobile WebKit supports touch moves, short screens, sound preference, and local analysis', async ({ page }) => {
  await page.goto('/');
  await expect(page.getByRole('link',{name:/Chinese Chess/})).toBeVisible();
+ await page.getByRole('button',{name:'Game menu',exact:true}).click();
  await page.getByRole('tab',{name:'Friend',exact:true}).tap();
  await page.getByRole('button',{name:'Play on this device'}).tap();
  await page.getByRole('button',{name:'red Soldier at a3',exact:true}).tap();
@@ -10,12 +11,16 @@ test('mobile WebKit supports touch moves, short screens, sound preference, and l
  await expect(page.getByText('1 ply',{exact:true})).toBeVisible();
  await page.setViewportSize({width:375,height:667});
  const board=page.getByRole('group',{name:/^Xiangqi board/});
- await board.scrollIntoViewIfNeeded();
+
  const bounds=await board.boundingBox();
- expect(bounds!.height).toBeLessThan(667);
+ expect(bounds!.y).toBeGreaterThanOrEqual(0);
+ expect(bounds!.y+bounds!.height).toBeLessThanOrEqual(667);
+ expect(await page.evaluate(()=>window.scrollY)).toBe(0);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+ await page.getByRole('button',{name:'Game menu',exact:true}).tap();
  await page.getByRole('button',{name:'Mute game sounds',exact:true}).tap();
  await page.reload();
+ await page.getByRole('button',{name:'Game menu',exact:true}).tap();
  await expect(page.getByRole('button',{name:'Turn sounds on',exact:true})).toBeVisible();
  page.once('dialog',dialog=>dialog.accept());
  await page.getByRole('button',{name:'Resign',exact:true}).tap();

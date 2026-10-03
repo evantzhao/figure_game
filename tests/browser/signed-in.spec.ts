@@ -27,7 +27,7 @@ test('check, same-board analysis, autosave, logout/login and history recovery',a
  await page.getByRole('button',{name:'Analyze game',exact:true}).click();
  await expect(page.getByText('Analyzed 5 moves.',{exact:true})).toBeVisible({timeout:15000});
  await expect(page.getByRole('group',{name:/^Xiangqi board/})).toHaveCount(1);
- await page.getByRole('slider',{name:'Analysis move'}).fill('1');
+ await page.getByRole('slider',{name:'Analysis move'}).press('ArrowRight');
  await expect(page.getByRole('button',{name:'red Cannon at e2',exact:true})).toBeVisible();
  await page.screenshot({path:'test-results/same-board-analysis.png'});
  await page.goto('/account');
@@ -44,7 +44,7 @@ test('check, same-board analysis, autosave, logout/login and history recovery',a
  await expect(page.getByRole('group',{name:/^Xiangqi board/})).toHaveCount(1);
  await page.route('**/api/history*',route=>route.fulfill({status:503,json:{error:'Temporary history failure'}}));
  await page.reload();
- await expect(page.getByRole('alert')).toContainText('Temporary history failure');
+ await expect(page.getByRole('alert').filter({hasText:'Temporary history failure'})).toBeVisible();
  await expect(page.getByRole('heading',{name:'A fresh page.'})).not.toBeVisible();
  await page.unroute('**/api/history*');
  await page.getByRole('button',{name:'Retry history'}).click();

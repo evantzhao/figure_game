@@ -31,7 +31,7 @@ test('mobile WebKit supports touch moves, short screens, sound preference, and l
  await expect(page.getByRole('img',{name:/Advantage graph/})).toBeVisible();
  const analyzedBounds=await board.boundingBox();
  expect(analyzedBounds!.y+analyzedBounds!.height).toBeLessThanOrEqual(667);
- await page.getByRole('slider',{name:'Analysis move'}).fill('1');
+ await page.getByRole('slider',{name:'Analysis move'}).press('ArrowRight');
  await expect(page.getByRole('button',{name:'red Soldier at a4',exact:true})).toBeVisible();
  await page.screenshot({path:'test-results/mobile-analysis.png',fullPage:true});
 });

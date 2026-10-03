@@ -124,7 +124,7 @@ export function Board({
               className={`intersection ${piece ? 'occupied' : ''} ${isTarget ? 'legal-target' : ''} ${selected === index ? 'selected' : ''} ${isLast ? 'last-move' : ''} ${piece?.color || ''} ${piece?.kind === 'k' && piece.color === position.turn && checked ? 'checked' : ''}`}
               style={style}
               tabIndex={focus === index ? 0 : -1}
-              aria-label={`${piece ? `${piece.color} ${PIECE_NAMES[piece.kind]}` : 'Empty'} at ${coordinate(index)}${isTarget ? ', legal destination' : ''}`}
+              aria-label={`${piece ? `${piece.color} ${PIECE_NAMES[piece.kind]}` : 'Empty'} at ${coordinate(index)}${isTarget ? ', legal destination' : ''}${piece?.kind === 'k' && piece.color === position.turn && checked ? ', in check' : ''}`}
               aria-pressed={selected === index}
               aria-disabled={disabled}
               onFocus={() => setFocus(index)}
@@ -152,6 +152,7 @@ export function Board({
                 <span className={`piece-disc ${isArrival ? 'moving' : ''}`}>
                   <span>{labels ? ENGLISH_GLYPHS[piece.kind] : GLYPHS[piece.color][piece.kind]}</span>
                   {labels ? <small>{PIECE_NAMES[piece.kind]}</small> : null}
+                  {piece.kind === 'k' && piece.color === position.turn && checked && <span className="check-badge">CHECK</span>}
                 </span>
               ) : (
                 <span className="empty-dot" />

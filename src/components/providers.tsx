@@ -14,7 +14,7 @@ export async function api<T>(path:string, data?:unknown):Promise<T> {
 }
 export function Providers({children}:{children:ReactNode}) {
   const [user,setUser]=useState<User|null>(null),[online,setOnline]=useState(false),[loading,setLoading]=useState(true),[dark,setDark]=useState(false);
-  async function refresh(){try {const status=await api<{online:boolean}>('status');setOnline(status.online);if(status.online)setUser((await api<{user:User|null}>('me')).user);}finally{setLoading(false);}}
+  async function refresh(){try {const status=await api<{online:boolean}>('status');setOnline(status.online);if(status.online)setUser((await api<{user:User|null}>('me')).user);else setUser(null);}finally{setLoading(false);}}
   useEffect(()=>{void refresh().catch(()=>setLoading(false));const saved=localStorage.getItem('figure-theme');setDark(saved==='dark'||(!saved&&matchMedia('(prefers-color-scheme: dark)').matches));},[]);
   useEffect(()=>{document.documentElement.dataset.theme=dark?'dark':'light';},[dark]);
   function toggleTheme(){setDark(value=>{localStorage.setItem('figure-theme',value?'light':'dark');return !value;});}

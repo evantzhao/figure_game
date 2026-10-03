@@ -27,5 +27,11 @@ test('mobile WebKit supports touch moves, short screens, sound preference, and l
  await page.getByRole('button',{name:'Analyze game',exact:true}).tap();
  await expect(page.getByRole('region',{name:'Post-game analysis'})).toBeVisible();
  await expect(page.getByText('Analyzed 1 moves.',{exact:true})).toBeVisible({timeout:15000});
+ await expect(board).toHaveCount(1);
+ await expect(page.getByRole('img',{name:/Advantage graph/})).toBeVisible();
+ const analyzedBounds=await board.boundingBox();
+ expect(analyzedBounds!.y+analyzedBounds!.height).toBeLessThanOrEqual(667);
+ await page.getByRole('slider',{name:'Analysis move'}).press('ArrowRight');
+ await expect(page.getByRole('button',{name:'red Soldier at a4',exact:true})).toBeVisible();
  await page.screenshot({path:'test-results/mobile-analysis.png',fullPage:true});
 });

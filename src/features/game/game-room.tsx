@@ -91,7 +91,7 @@ export function GameRoom({gameId}:{gameId?:string}) {
  {remote?.draw_by&&remote.draw_by!==user?.id&&remote.status==='active'&&<div className="card setup"><p>Your opponent offers a draw.</p><button className="button primary" disabled={busy} onClick={()=>void send('accept-draw')}>Accept draw</button><button className="button secondary" onClick={()=>void send('decline-draw')}>Keep playing</button></div>}
  <nav className="game-links" aria-label="Game navigation"><Link href="/learn">Learn</Link><Link href="/history">Your games</Link><Link href="/leaderboard">Ratings</Link></nav>
  </aside></GameDialog>{analysisMoves&&<GameAnalysis moves={analysisMoves} ply={analysisPly} onSelect={(ply,best)=>{setCursor(ply);setSuggestion(best??null);}} onClose={closeAnalysis}/>}</div>
- {(error||notice||(!connected&&remote)||remote?.draw_by&&remote.draw_by!==user?.id||remote?.rematch_by&&remote.rematch_by!==user?.id||queued)&&<button className="game-alert" onClick={()=>setMenuOpen(true)}>{error||notice||(!connected?'Connection lost — reconnect':queued?'Finding a player…':remote?.draw_by?'Draw offered — respond':'Rematch offered — respond')}</button>}
+ {(error||(!analysisMoves&&notice)||(!connected&&remote)||remote?.draw_by&&remote.draw_by!==user?.id||remote?.rematch_by&&remote.rematch_by!==user?.id||queued)&&<button className="game-alert" onClick={()=>setMenuOpen(true)}>{error||notice||(!connected?'Connection lost — reconnect':queued?'Finding a player…':remote?.draw_by?'Draw offered — respond':'Rematch offered — respond')}</button>}
  {gameEnded&&resultDismissed&&!menuOpen&&state.moves.length>0&&!analysisMoves&&<button className="analysis-shortcut" onClick={beginAnalysis}>Analyze game</button>}
 
  </div>;
